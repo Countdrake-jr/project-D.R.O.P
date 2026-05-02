@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1UW_rH7ll4IBGXOZMBgAxjqvObxYhgVjr
 """
 
-!pip install streamlit pyngrok plotly -q
 
 # Commented out IPython magic to ensure Python compatibility.
 # # @title
