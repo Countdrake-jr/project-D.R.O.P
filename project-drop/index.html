@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D.R.O.P. — Smart Farm Dashboard</title>
+  <meta name="description" content="Project D.R.O.P. — Know exactly when to water your crops. Real-time soil and weather monitoring for smart farming." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Firebase compat SDK (v9) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <!-- Chart.js + Annotation plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+  <!-- Firebase config (user fills in their credentials) -->
+  <script src="firebase-config.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════ NAVBAR ═══ -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <span class="nav-logo-icon">💧</span>
+      <div>
+        <div class="nav-logo-title">D.R.O.P.</div>
+        <div class="nav-logo-sub">Smart Farm Dashboard</div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div id="connection-badge" class="badge badge-connecting">
+        <span class="badge-dot"></span>
+        <span id="connection-text">Connecting…</span>
+      </div>
+      <div id="last-updated" class="last-updated" style="display:none">Updated just now</div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════ DEMO BANNER ═══ -->
+  <div id="demo-banner" class="demo-banner" style="display:none">
+    ⚠️ Running in <strong>Demo Mode</strong> — Firebase not configured. Fill in <code>firebase-config.js</code> to connect your sensor.
+  </div>
+
+  <!-- ═══════════════════════════════════════ TABS ══════ -->
+  <div class="tabs-wrapper">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dashboard" id="tab-btn-dashboard">
+        📡 Live Dashboard
+      </button>
+      <button class="tab-btn" data-tab="calculator" id="tab-btn-calculator">
+        🌿 Crop Calculator
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════ TAB: LIVE DASHBOARD ══ -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="container">
+
+      <!-- Hero -->
+      <div class="hero">
+        <div class="hero-badge">AI-Powered · Real-Time Monitoring</div>
+        <h1>Know exactly when to water 💧</h1>
+        <p>Your sensors are watching your farm 24/7. We'll tell you when your crops need water — before it's too late.</p>
+      </div>
+
+      <!-- Sensor Cards -->
+      <section class="section">
+        <h2 class="section-title">📟 Live Sensor Readings</h2>
+        <div class="sensor-grid">
+          <div class="sensor-card" id="card-temp">
+            <div class="sensor-icon">🌡️</div>
+            <div class="sensor-label">Air Temperature</div>
+            <div class="sensor-value" id="temp-value">--</div>
+            <div class="sensor-unit">°C</div>
+          </div>
+          <div class="sensor-card" id="card-humidity">
+            <div class="sensor-icon">💧</div>
+            <div class="sensor-label">Air Humidity</div>
+            <div class="sensor-value" id="humidity-value">--</div>
+            <div class="sensor-unit">%</div>
+          </div>
+          <div class="sensor-card" id="card-moisture">
+            <div class="sensor-icon">🌱</div>
+            <div class="sensor-label">Soil Moisture</div>
+            <div class="sensor-value" id="moisture-value">--</div>
+            <div class="sensor-unit">%</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TTD + KPIs -->
+      <section class="section">
+        <h2 class="section-title">⏱️ Time Until You Must Water</h2>
+        <div class="ttd-kpi-grid">
+
+          <!-- TTD Big Card -->
+          <div class="ttd-card" id="ttd-card">
+            <div class="ttd-label">Hours Until Watering</div>
+            <div class="ttd-value" id="ttd-value">--</div>
+            <div class="ttd-unit">hours</div>
+            <div class="ttd-status" id="ttd-status">
+              <span id="ttd-emoji">⏳</span>
+              <span id="ttd-status-text">Calculating…</span>
+            </div>
+            <div class="ttd-eta" id="ttd-eta"></div>
+          </div>
+
+          <!-- KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon">🔥</div>
+              <div class="kpi-label">How fast soil is drying</div>
+              <div class="kpi-value" id="kpi-evap">-- %/hr</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon">📊</div>
+              <div class="kpi-label">Drought Risk Level</div>
+              <div class="kpi-value" id="kpi-risk">-- / 100</div>
+              <div class="kpi-sub" id="kpi-risk-label">--</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon">⚙️</div>
+              <div class="kpi-label">Pump Status</div>
+              <div class="kpi-value" id="kpi-pump">STANDBY</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon">🪣</div>
+              <div class="kpi-label">Water Tank Level</div>
+              <div class="kpi-value" id="kpi-water">-- %</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Moisture Chart -->
+      <section class="section">
+        <h2 class="section-title">📈 How Your Soil Will Dry Over the Next 24 Hours</h2>
+        <p class="section-hint">The red zone is where your crops start to suffer. Watch out when the line drops into it.</p>
+        <div class="chart-box">
+          <canvas id="dashboard-chart" height="340"></canvas>
+        </div>
+      </section>
+
+      <!-- Alert Banner -->
+      <section class="section">
+        <div id="alert-banner" class="alert-waiting">
+          <span id="alert-icon">⏳</span>
+          <span id="alert-text">Waiting for sensor data…</span>
+        </div>
+      </section>
+
+    </div>
+  </div><!-- /tab-dashboard -->
+
+  <!-- ═════════════════════════════ TAB: CALCULATOR ═════ -->
+  <div id="tab-calculator" class="tab-content">
+    <div class="container">
+
+      <div class="hero">
+        <div class="hero-badge">Manual Calculation Tool</div>
+        <h1>Calculate for your specific crop 🌾</h1>
+        <p>Select your crop, enter today's conditions, and find out exactly how long you have before you need to water.</p>
+      </div>
+
+      <div class="calc-layout">
+
+        <!-- Inputs Panel -->
+        <div class="calc-inputs card">
+          <h2 class="card-title">Your Farm Conditions</h2>
+
+          <!-- Plant Selector -->
+          <div class="form-group">
+            <label class="form-label" for="plant-select">🌾 What are you growing?</label>
+            <select id="plant-select" class="form-select">
+              <option value="maize">🌽 Maize / Corn</option>
+              <option value="wheat">🌾 Wheat</option>
+              <option value="tomato">🍅 Tomato</option>
+              <option value="beans">🫘 Beans</option>
+              <option value="cassava">🍠 Cassava</option>
+              <option value="rice">🌾 Rice</option>
+              <option value="custom">⚙️ Custom (set my own threshold)</option>
+            </select>
+            <div class="plant-tip" id="plant-tip">🌽 Maize needs watering when soil drops below 30%.</div>
+          </div>
+
+          <!-- Custom threshold (hidden unless custom selected) -->
+          <div class="form-group" id="custom-threshold-group" style="display:none">
+            <label class="form-label" for="custom-threshold">⚠️ Critical soil moisture level (%)</label>
+            <div class="slider-row">
+              <input type="range" id="custom-threshold" min="10" max="60" value="25" class="slider" />
+              <span class="slider-val" id="custom-threshold-val">25%</span>
+            </div>
+          </div>
+
+          <!-- Temperature -->
+          <div class="form-group">
+            <label class="form-label" for="calc-temp">🌡️ How hot is it today?</label>
+            <div class="slider-row">
+              <input type="range" id="calc-temp" min="15" max="45" value="28" class="slider" />
+              <span class="slider-val" id="calc-temp-val">28°C</span>
+            </div>
+            <div class="slider-hint">Move the slider to match today's air temperature</div>
+          </div>
+
+          <!-- Humidity -->
+          <div class="form-group">
+            <label class="form-label" for="calc-humidity">💧 How humid is the air?</label>
+            <div class="slider-row">
+              <input type="range" id="calc-humidity" min="10" max="100" value="60" class="slider" />
+              <span class="slider-val" id="calc-humidity-val">60%</span>
+            </div>
+            <div class="slider-hint">Check a weather app for today's humidity if unsure</div>
+          </div>
+
+          <!-- Soil Moisture -->
+          <div class="form-group">
+            <label class="form-label" for="calc-moisture">🌱 How wet is your soil right now?</label>
+            <div class="slider-row">
+              <input type="range" id="calc-moisture" min="0" max="100" value="45" class="slider" />
+              <span class="slider-val" id="calc-moisture-val">45%</span>
+            </div>
+            <div class="slider-hint">0% = bone dry · 50% = moderately moist · 100% = waterlogged</div>
+          </div>
+
+          <button id="calc-btn" class="calc-btn">
+            🔮 Calculate Watering Time
+          </button>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="calc-results" class="calc-results card" style="display:none">
+          <h2 class="card-title">Your Results</h2>
+
+          <div class="result-ttd-card" id="result-ttd-card">
+            <div class="result-ttd-label">Time until you MUST water</div>
+            <div class="result-ttd-value" id="calc-ttd-value">--</div>
+            <div class="result-ttd-unit">hours</div>
+            <div class="result-status" id="calc-ttd-status">--</div>
+          </div>
+
+          <div class="advice-box" id="calc-advice">
+            <!-- filled by JS -->
+          </div>
+
+          <div class="eta-box" id="calc-eta">
+            <!-- filled by JS -->
+          </div>
+
+          <div class="section-title" style="margin-top:24px; font-size:0.9rem;">
+            📈 Moisture forecast for your crop
+          </div>
+          <div class="chart-box" style="margin-top:8px">
+            <canvas id="calculator-chart" height="280"></canvas>
+          </div>
+        </div>
+
+      </div><!-- /calc-layout -->
+    </div>
+  </div><!-- /tab-calculator -->
+
+  <!-- ════════════════════════════════════════ FOOTER ═══ -->
+  <footer class="footer">
+    <div>💧 Project D.R.O.P. — Drought Recognition &amp; Optimization Platform</div>
+    <div>v2.0 · STEM Exhibition Build · © 2025 Project D.R.O.P. Team</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
